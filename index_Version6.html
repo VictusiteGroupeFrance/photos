@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#10100e">
+  <title>Photo Lab — Appareil photo</title>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10100e;
+      --panel: #1a1915;
+      --panel-light: #222119;
+      --gold: #d7b66d;
+      --gold-light: #f0d99d;
+      --text: #f4f0e5;
+      --muted: #aaa597;
+      --border: rgba(215, 182, 109, .2);
+      --danger: #ed7474;
+      --green: #83d6a0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 15% 0%, rgba(215, 182, 109, .1), transparent 35%),
+        var(--bg);
+    }
+
+    button, input { font: inherit; }
+
+    button {
+      color: inherit;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .48;
+    }
+
+    .app {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: rgba(20, 19, 16, .96);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, .45);
+    }
+
+    header {
+      min-height: 76px;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      font-size: .88rem;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      color: #17140d;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      font-size: 1.15rem;
+    }
+
+    .status {
+      color: var(--green);
+      font-size: .82rem;
+      font-weight: 700;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .panel {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--panel);
+    }
+
+    .camera-frame {
+      position: relative;
+      min-height: 480px;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #080807;
+    }
+
+    #camera {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 480px;
+      object-fit: cover;
+      transition: filter .2s ease, transform .2s ease;
+    }
+
+    .camera-placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+      background:
+        linear-gradient(rgba(0, 0, 0, .15), rgba(0, 0, 0, .5)),
+        repeating-linear-gradient(135deg, #171611, #171611 12px, #1d1b15 12px, #1d1b15 24px);
+    }
+
+    .camera-placeholder.hidden { display: none; }
+
+    .camera-grid {
+      position: absolute;
+      inset: 10%;
+      pointer-events: none;
+      opacity: .35;
+      background:
+        linear-gradient(to right, transparent 33.2%, rgba(255,255,255,.55) 33.3%, transparent 33.5%, transparent 66.5%, rgba(255,255,255,.55) 66.7%, transparent 66.9%),
+        linear-gradient(to bottom, transparent 33.2%, rgba(255,255,255,.55) 33.3%, transparent 33.5%, transparent 66.5%, rgba(255,255,255,.55) 66.7%, transparent 66.9%);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      min-height: 42px;
+      padding: 10px 15px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: var(--panel-light);
+      font-weight: 700;
+      transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(215, 182, 109, .65);
+    }
+
+    .btn-gold {
+      color: #19150c;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    }
+
+    .btn-danger {
+      color: #ffe5e5;
+      border-color: rgba(237, 116, 116, .35);
+      background: rgba(237, 116, 116, .12);
+    }
+
+    .btn-record {
+      color: #ffe5e5;
+      border-color: rgba(237, 116, 116, .45);
+      background: rgba(237, 116, 116, .17);
+    }
+
+    .btn-record.recording {
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      50% { box-shadow: 0 0 0 5px rgba(237, 116, 116, .12); }
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      color: var(--gold);
+      font-size: .74rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .filter-btn {
+      min-height: 39px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel-light);
+      color: var(--muted);
+      font-size: .8rem;
+    }
+
+    .filter-btn.active {
+      border-color: var(--gold);
+      color: var(--gold-light);
+      background: rgba(215, 182, 109, .12);
+    }
+
+    .preview {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #0c0c0a;
+      color: var(--muted);
+      text-align: center;
+      font-size: .85rem;
+    }
+
+    .preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .setting {
+      margin-top: 12px;
+    }
+
+    .setting-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: .82rem;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--gold);
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: .84rem;
+    }
+
+    .switch-row input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--gold);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel-light);
+    }
+
+    .stat strong {
+      display: block;
+      color: var(--gold-light);
+      font-size: 1.3rem;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: .68rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .gallery-section {
+      margin: 0 20px 20px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--panel);
+    }
+
+    .gallery-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .gallery-heading .section-title { margin: 0; }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 12px;
+    }
+
+    .media-card {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: #13120f;
+    }
+
+    .media-card img,
+    .media-card video {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      background: #080807;
+    }
+
+    .media-info {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+      padding: 9px;
+    }
+
+    .media-date {
+      flex: 1 1 100%;
+      color: var(--muted);
+      font-size: .72rem;
+    }
+
+    .media-info .btn {
+      min-height: 32px;
+      padding: 6px 9px;
+      font-size: .72rem;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      padding: 28px 14px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .flash-overlay {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      pointer-events: none;
+      background: white;
+      opacity: 0;
+    }
+
+    .flash-overlay.fire {
+      animation: flash .25s ease-out;
+    }
+
+    @keyframes flash {
+      0% { opacity: .95; }
+      100% { opacity: 0; }
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .camera-frame, #camera { min-height: 380px; }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      header { padding: 15px; }
+      .layout { padding: 12px; }
+      .sidebar { display: flex; }
+      .camera-frame, #camera { min-height: 300px; }
+      .controls .btn { flex: 1 1 calc(50% - 10px); }
+      .gallery-section { margin: 0 12px 12px; }
+      .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="flashOverlay" class="flash-overlay"></div>
+
+  <main class="app">
+    <header>
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">◉</span>
+        <span>Photo Lab</span>
+      </div>
+      <div id="status" class="status" role="status" aria-live="polite">Prêt</div>
+    </header>
+
+    <div class="layout">
+      <section class="panel" aria-label="Appareil photo">
+        <div class="camera-frame">
+          <video id="camera" autoplay playsinline muted></video>
+          <div id="cameraPlaceholder" class="camera-placeholder">
+            Démarre la caméra pour commencer
+          </div>
+          <div class="camera-grid" aria-hidden="true"></div>
+        </div>
+
+        <div class="controls">
+          <button id="startCamera" class="btn btn-gold" type="button">Démarrer la caméra</button>
+          <button id="takePhoto" class="btn" type="button" disabled>Prendre une photo</button>
+          <button id="startRecording" class="btn btn-record" type="button" disabled>● Enregistrer</button>
+          <button id="stopRecording" class="btn btn-danger" type="button" disabled>■ Arrêter</button>
+          <button id="switchCamera" class="btn" type="button" disabled>Changer caméra</button>
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="panel">
+          <h2 class="section-title">Filtres en direct</h2>
+          <div id="filters" class="filters"></div>
+        </section>
+
+        <section class="panel">
+          <h2 class="section-title">Dernière photo</h2>
+          <div id="preview" class="preview">La dernière photo apparaîtra ici</div>
+        </section>
+
+        <section class="panel">
+          <h2 class="section-title">Réglages</h2>
+          <div class="setting">
+            <div class="setting-head">
+              <label for="zoom">Zoom</label>
+              <span id="zoomValue">1,0×</span>
+            </div>
+            <input id="zoom" type="range" min="1" max="2" step="0.1" value="1">
+          </div>
+
+          <label class="switch-row" for="flash">
+            <span>Flash (si pris en charge)</span>
+            <input id="flash" type="checkbox">
+          </label>
+
+          <p style="margin:10px 0 0;color:var(--muted);font-size:.72rem;line-height:1.5">
+            Le flash réel dépend de l’appareil. Sinon, un effet lumineux est appliqué aux photos.
+          </p>
+        </section>
+
+        <section class="panel">
+          <h2 class="section-title">Bibliothèque</h2>
+          <div class="stats">
+            <div class="stat"><strong id="photoCount">0</strong><span>Photos</span></div>
+            <div class="stat"><strong id="videoCount">0</strong><span>Vidéos</span></div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="gallery-section">
+      <div class="gallery-heading">
+        <h2 class="section-title">Galerie photos</h2>
+        <button id="clearPhotos" class="btn btn-danger" type="button">Vider</button>
+      </div>
+      <div id="photoGallery" class="gallery"></div>
+    </section>
+
+    <section class="gallery-section">
+      <div class="gallery-heading">
+        <h2 class="section-title">Galerie vidéos</h2>
+        <button id="clearVideos" class="btn btn-danger" type="button">Vider</button>
+      </div>
+      <div id="videoGallery" class="gallery"></div>
+    </section>
+  </main>
+
+  <canvas id="captureCanvas" hidden></canvas>
+
+  <script>
+    "use strict";
+
+    const DB_NAME = "PhotoLabDatabase";
+    const DB_VERSION = 1;
+
+    const filters = {
+      none: { label: "Naturel", css: "none" },
+      bw: { label: "Noir & blanc", css: "grayscale(1) contrast(1.12)" },
+      sepia: { label: "Sépia", css: "sepia(1) saturate(1.2)" },
+      vintage: { label: "Vintage", css: "sepia(.55) contrast(1.12) saturate(.8)" },
+      warm: { label: "Chaud", css: "sepia(.18) saturate(1.35) hue-rotate(-8deg)" },
+      cool: { label: "Froid", css: "saturate(.9) hue-rotate(15deg) brightness(1.04)" },
+      pop: { label: "Pop", css: "saturate(1.7) contrast(1.08)" },
+      dream: { label: "Dream", css: "brightness(1.1) saturate(1.2) contrast(.92)" }
+    };
+
+    const state = {
+      db: null,
+      photos: [],
+      videos: [],
+      filter: "none",
+      facingMode: "environment",
+      stream: null,
+      recorder: null,
+      recordingChunks: [],
+      recording: false,
+      drawFrameId: null,
+      flashTimer: null
+    };
+
+    const camera = document.getElementById("camera");
+    const cameraPlaceholder = document.getElementById("cameraPlaceholder");
+    const canvas = document.getElementById("captureCanvas");
+    const context = canvas.getContext("2d");
+    const status = document.getElementById("status");
+    const preview = document.getElementById("preview");
+    const photoGallery = document.getElementById("photoGallery");
+    const videoGallery = document.getElementById("videoGallery");
+    const zoomInput = document.getElementById("zoom");
+    const zoomValue = document.getElementById("zoomValue");
+    const flashInput = document.getElementById("flash");
+
+    function setStatus(message) {
+      status.textContent = message;
+    }
+
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        if (!("indexedDB" in window)) {
+          reject(new Error("IndexedDB n’est pas disponible dans ce navigateur."));
+          return;
+        }
+
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains("photos")) {
+            db.createObjectStore("photos", { keyPath: "id" });
+          }
+          if (!db.objectStoreNames.contains("videos")) {
+            db.createObjectStore("videos", { keyPath: "id" });
+          }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    function storeRequest(storeName, mode, action) {
+      return new Promise((resolve, reject) => {
+        const transaction = state.db.transaction(storeName, mode);
+        const store = transaction.objectStore(storeName);
+        const request = action(store);
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+        transaction.onerror = () => reject(transaction.error);
+      });
+    }
+
+    function addMedia(storeName, item) {
+      return storeRequest(storeName, "readwrite", store => store.put(item));
+    }
+
+    function getMedia(storeName) {
+      return storeRequest(storeName, "readonly", store => store.getAll());
+    }
+
+    function deleteMedia(storeName, id) {
+      return storeRequest(storeName, "readwrite", store => store.delete(id));
+    }
+
+    function clearMedia(storeName) {
+      return storeRequest(storeName, "readwrite", store => store.clear());
+    }
+
+    function createId() {
+      return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function formatDate(dateString) {
+      return new Date(dateString).toLocaleString("fr-FR", {
+        dateStyle: "short",
+        timeStyle: "short"
+      });
+    }
+
+    function renderFilters() {
+      const container = document.getElementById("filters");
+      container.replaceChildren();
+
+      for (const [key, filter] of Object.entries(filters)) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `filter-btn${state.filter === key ? " active" : ""}`;
+        button.textContent = filter.label;
+        button.setAttribute("aria-pressed", String(state.filter === key));
+
+        button.addEventListener("click", () => {
+          state.filter = key;
+          camera.style.filter = filter.css;
+          renderFilters();
+        });
+
+        container.appendChild(button);
+      }
+
+      camera.style.filter = filters[state.filter].css;
+    }
+
+    function getZoom() {
+      return Number(zoomInput.value);
+    }
+
+    function drawCameraFrame(ctx, width, height, includeFlash = false) {
+      const sourceWidth = camera.videoWidth;
+      const sourceHeight = camera.videoHeight;
+      if (!sourceWidth || !sourceHeight) return false;
+
+      const zoom = getZoom();
+      const cropWidth = sourceWidth / zoom;
+      const cropHeight = sourceHeight / zoom;
+      const cropX = (sourceWidth - cropWidth) / 2;
+      const cropY = (sourceHeight - cropHeight) / 2;
+
+      ctx.save();
+      ctx.clearRect(0, 0, width, height);
+      ctx.filter = filters[state.filter].css;
+
+      if (state.facingMode === "user") {
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+      }
+
+      ctx.drawImage(
+        camera,
+        cropX, cropY, cropWidth, cropHeight,
+        0, 0, width, height
+      );
+
+      ctx.restore();
+      ctx.filter = "none";
+
+      if (includeFlash && flashInput.checked) {
+        ctx.fillStyle = "rgba(255,255,255,.72)";
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      return true;
+    }
+
+    function animateFlash() {
+      const overlay = document.getElementById("flashOverlay");
+      overlay.classList.remove("fire");
+      void overlay.offsetWidth;
+      overlay.classList.add("fire");
+      clearTimeout(state.flashTimer);
+      state.flashTimer = setTimeout(() => overlay.classList.remove("fire"), 300);
+    }
+
+    async function setTorch(enabled) {
+      const track = state.stream?.getVideoTracks?.()[0];
+      if (!track?.getCapabilities) return false;
+
+      const capabilities = track.getCapabilities();
+      if (!capabilities.torch) return false;
+
+      try {
+        await track.applyConstraints({ advanced: [{ torch: enabled }] });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setStatus("Caméra indisponible : utilise HTTPS ou localhost");
+        return;
+      }
+
+      stopCamera();
+      setStatus("Ouverture de la caméra…");
+
+      try {
+        let stream;
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: state.facingMode },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 }
+            },
+            audio: true
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: state.facingMode } },
+            audio: false
+          });
+        }
+
+        state.stream = stream;
+        camera.srcObject = stream;
+        await camera.play();
+
+        cameraPlaceholder.classList.add("hidden");
+        document.getElementById("takePhoto").disabled = false;
+        document.getElementById("startRecording").disabled = false;
+        document.getElementById("switchCamera").disabled = false;
+        camera.style.transform = state.facingMode === "user" ? "scaleX(-1)" : "none";
+        camera.style.filter = filters[state.filter].css;
+        setStatus("Caméra prête");
+      } catch (error) {
+        console.error(error);
+        cameraPlaceholder.classList.remove("hidden");
+        setStatus("Accès caméra refusé ou indisponible");
+      }
+    }
+
+    function stopCamera() {
+      if (state.stream) {
+        state.stream.getTracks().forEach(track => track.stop());
+        state.stream = null;
+      }
+
+      camera.srcObject = null;
+
+      if (!state.recording) {
+        document.getElementById("takePhoto").disabled = true;
+        document.getElementById("startRecording").disabled = true;
+        document.getElementById("switchCamera").disabled = true;
+      }
+    }
+
+    async function switchCamera() {
+      if (state.recording) return;
+      state.facingMode = state.facingMode === "environment" ? "user" : "environment";
+      await startCamera();
+    }
+
+    function setCanvasSize() {
+      canvas.width = camera.videoWidth || 1280;
+      canvas.height = camera.videoHeight || 720;
+    }
+
+    async function takePhoto() {
+      if (!state.stream || !camera.videoWidth) {
+        setStatus("Démarre la caméra avant de prendre une photo");
+        return;
+      }
+
+      setCanvasSize();
+      drawCameraFrame(context, canvas.width, canvas.height, true);
+      animateFlash();
+
+      try {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", .94));
+        if (!blob) throw new Error("Impossible de créer la photo");
+
+        const photo = {
+          id: createId(),
+          blob,
+          createdAt: new Date().toISOString(),
+          filter: filters[state.filter].label
+        };
+
+        await addMedia("photos", photo);
+        await refreshPhotos();
+        setStatus("Photo enregistrée");
+      } catch (error) {
+        console.error(error);
+        setStatus("Impossible d’enregistrer la photo");
+      }
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function makeButton(text, className, onClick) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `btn ${className || ""}`.trim();
+      button.textContent = text;
+      button.addEventListener("click", onClick);
+      return button;
+    }
+
+    async function refreshPhotos() {
+      state.photos = (await getMedia("photos")).sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      document.getElementById("photoCount").textContent = state.photos.length;
+      photoGallery.replaceChildren();
+
+      if (!state.photos.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "Aucune photo pour le moment.";
+        photoGallery.appendChild(empty);
+        preview.textContent = "La dernière photo apparaîtra ici";
+        return;
+      }
+
+      const latestUrl = URL.createObjectURL(state.photos[0].blob);
+      preview.replaceChildren();
+      const previewImage = document.createElement("img");
+      previewImage.src = latestUrl;
+      previewImage.alt = "Aperçu de la dernière photo";
+      preview.appendChild(previewImage);
+
+      for (const photo of state.photos) {
+        const url = URL.createObjectURL(photo.blob);
+        const card = document.createElement("article");
+        card.className = "media-card";
+
+        const image = document.createElement("img");
+        image.src = url;
+        image.alt = `Photo — filtre ${photo.filter}`;
+
+        const info = document.createElement("div");
+        info.className = "media-info";
+
+        const date = document.createElement("span");
+        date.className = "media-date";
+        date.textContent = `${formatDate(photo.createdAt)} · ${photo.filter}`;
+
+        const download = makeButton("Télécharger", "", () => {
+          downloadBlob(photo.blob, `photo-${photo.id}.jpg`);
+        });
+
+        const remove = makeButton("Supprimer", "btn-danger", async () => {
+          await deleteMedia("photos", photo.id);
+          URL.revokeObjectURL(url);
+          await refreshPhotos();
+          setStatus("Photo supprimée");
+        });
+
+        info.append(date, download, remove);
+        card.append(image, info);
+        photoGallery.appendChild(card);
+      }
+    }
+
+    function recordingStream() {
+      setCanvasSize();
+      const canvasStream = canvas.captureStream(30);
+      const audioTracks = state.stream?.getAudioTracks?.() || [];
+      return new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...audioTracks
+      ]);
+    }
+
+    function drawRecordingFrame() {
+      if (!state.recording) return;
+      drawCameraFrame(context, canvas.width, canvas.height);
+      state.drawFrameId = requestAnimationFrame(drawRecordingFrame);
+    }
+
+    function chooseMimeType() {
+      if (!window.MediaRecorder?.isTypeSupported) return "";
+      const types = [
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm"
+      ];
+      return types.find(type => MediaRecorder.isTypeSupported(type)) || "";
+    }
+
+    function startRecording() {
+      if (!state.stream || !camera.videoWidth) {
+        setStatus("Démarre la caméra avant d’enregistrer");
+        return;
+      }
+
+      if (!window.MediaRecorder || !canvas.captureStream) {
+        setStatus("L’enregistrement vidéo n’est pas pris en charge");
+        return;
+      }
+
+      try {
+        state.recordingChunks = [];
+        state.recording = true;
+        drawRecordingFrame();
+
+        const stream = recordingStream();
+        const mimeType = chooseMimeType();
+        state.recorder = mimeType
+          ? new MediaRecorder(stream, { mimeType })
+          : new MediaRecorder(stream);
+
+        state.recorder.addEventListener("dataavailable", event => {
+          if (event.data?.size) state.recordingChunks.push(event.data);
+        });
+
+        state.recorder.addEventListener("stop", async () => {
+          state.recording = false;
